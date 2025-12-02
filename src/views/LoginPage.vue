@@ -1,14 +1,29 @@
 <template>
-  <div class="page">
-    <img src="./assets/login-background.png" alt="模糊背景" class="bg-blur" />
-    <div class="icon">
-      <img src="./assets/icon.png" alt="主背景" />
+  <!-- 模糊背景 -->
+  <img
+    src="@/assets/login-background.png"
+    alt="模糊背景"
+    class="absolute inset-0 w-full h-full object-cover filter blur-xs brightness-75 -z-10"
+  />
+
+  <div class="relative h-screen overflow-hidden font-sans mx-4">
+    <!-- 图标 -->
+    <div class="text-center pt-12">
+      <img src="@/assets/icon.png" alt="主背景" class="mx-auto" />
     </div>
-    <div class="form-wrapper">
-      <h2 class="title">{{ mode === 'login' ? '登录' : '注册' }}</h2>
+
+    <!-- 表单容器 -->
+    <div
+      class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-xs w-full p-3 bg-white/20 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30"
+    >
+      <h2 class="text-center text-white text-2xl font-bold mb-7 drop-shadow-lg">
+        {{ mode === 'login' ? '登录' : '注册' }}
+      </h2>
+
       <form @submit.prevent="onSubmit">
-        <div class="form-item">
-          <label for="username">QQ</label>
+        <!-- 用户名 -->
+        <div class="flex flex-col mb-5">
+          <label for="username" class="mb-1 text-white font-medium drop-shadow">QQ</label>
           <input
             id="username"
             v-model="form.username"
@@ -16,11 +31,13 @@
             type="text"
             placeholder="请输入用户名"
             required
+            class="px-4 py-2 rounded-xl border border-white/40 bg-white/25 text-white placeholder-white/70 text-sm focus:border-blue-400 focus:bg-white/35 focus:ring-2 focus:ring-blue-400 outline-none transition"
           />
         </div>
 
-        <div class="form-item">
-          <label for="password">密码</label>
+        <!-- 密码 -->
+        <div class="flex flex-col mb-5">
+          <label for="password" class="mb-1 text-white font-medium drop-shadow">密码</label>
           <input
             id="password"
             v-model="form.password"
@@ -28,16 +45,26 @@
             type="password"
             placeholder="请输入密码"
             required
+            class="px-4 py-2 rounded-xl border border-white/40 bg-white/25 text-white placeholder-white/70 text-sm focus:border-blue-400 focus:bg-white/35 focus:ring-2 focus:ring-blue-400 outline-none transition"
           />
         </div>
 
-        <div style="margin: 16px 0">
-          <button type="submit">
+        <!-- 提交按钮 -->
+        <div class="mb-4">
+          <button
+            type="submit"
+            class="w-full py-3 rounded-3xl bg-gradient-to-r from-blue-500 to-sky-400 text-white text-base font-semibold shadow-lg hover:from-sky-400 hover:to-blue-500 transition"
+          >
             {{ mode === 'login' ? '登录' : '注册' }}
           </button>
         </div>
       </form>
-      <div class="toggle" @click="toggleMode">
+
+      <!-- 模式切换 -->
+      <div
+        @click="toggleMode"
+        class="text-center text-white text-sm mt-3 underline cursor-pointer drop-shadow hover:text-yellow-400 transition"
+      >
         {{ mode === 'login' ? '没有账号？去注册' : '已有账号？去登录' }}
       </div>
     </div>
@@ -45,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { ref, reactive } from 'vue'
 
 const mode = ref('login')
 const form = reactive({
@@ -61,57 +88,3 @@ function toggleMode() {
   mode.value = mode.value === 'login' ? 'register' : 'login'
 }
 </script>
-
-<style scoped>
-.page {
-  position: relative;
-  height: 100vh;
-  overflow: hidden;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-.icon {
-  text-align: center;
-  padding-top: 50px;
-}
-/* 模糊背景 */
-.bg-blur {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  object-fit: cover;
-  object-position: center;
-  filter: blur(2px);
-  z-index: -1;
-}
-/* 居中表单容器 */
-.form-wrapper {
-  position: absolute; /* 或 fixed，取决于是否要随滚动条移动 */
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%); /* 水平 + 垂直 居中 */
-  max-width: 360px;
-  padding: 32px 24px;
-  background: rgba(49, 167, 221, 0.5);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
-}
-
-/* 标题 */
-.title {
-  text-align: center;
-  margin-bottom: 24px;
-  font-weight: 600;
-  font-size: 1.6rem;
-  color: #333;
-}
-
-/* 模式切换 */
-.toggle {
-  text-align: center;
-  color: #ffffff;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.9rem;
-  margin-top: 8px;
-}
-</style>
