@@ -29,7 +29,7 @@
             v-model="form.username"
             name="username"
             type="text"
-            placeholder="请输入用户名"
+            placeholder="群内个人QQ号"
             required
             class="px-4 py-2 rounded-xl border border-white/40 bg-white/25 text-white placeholder-white/70 text-sm focus:border-blue-400 focus:bg-white/35 focus:ring-2 focus:ring-blue-400 outline-none transition"
           />
@@ -43,7 +43,23 @@
             v-model="form.password"
             name="password"
             type="password"
-            placeholder="请输入密码"
+            placeholder="注册密码 非QQ密码！！！"
+            required
+            class="px-4 py-2 rounded-xl border border-white/40 bg-white/25 text-white placeholder-white/70 text-sm focus:border-blue-400 focus:bg-white/35 focus:ring-2 focus:ring-blue-400 outline-none transition"
+          />
+        </div>
+
+        <!-- 确认密码（仅注册时显示） -->
+        <div v-if="mode === 'register'" class="flex flex-col mb-5">
+          <label for="confirmPassword" class="mb-1 text-white font-medium drop-shadow"
+            >确认密码</label
+          >
+          <input
+            id="confirmPassword"
+            v-model="form.confirmPassword"
+            name="confirmPassword"
+            type="password"
+            placeholder="请再次输入"
             required
             class="px-4 py-2 rounded-xl border border-white/40 bg-white/25 text-white placeholder-white/70 text-sm focus:border-blue-400 focus:bg-white/35 focus:ring-2 focus:ring-blue-400 outline-none transition"
           />
@@ -72,19 +88,23 @@
 </template>
 
 <script setup lang="ts">
+import router from '@/router'
 import { ref, reactive } from 'vue'
 
 const mode = ref('login')
 const form = reactive({
   username: '',
   password: '',
+  confirmPassword: '',
 })
-
-function onSubmit() {
-  alert(`${mode.value}成功！用户名：${form.username}`)
-}
 
 function toggleMode() {
   mode.value = mode.value === 'login' ? 'register' : 'login'
 }
+
+function onSubmit() {
+  alert(`${mode.value}成功！用户名：${form.username}`)
+  // router.push('/home')
+}
+
 </script>

@@ -5,11 +5,11 @@ import LoginPage from '@/views/LoginPage.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/home' // 默认重定向
+    redirect: '/login' // 默认重定向
   },
   {
-    path: '/home',
-    name: 'home',
+    path: '/login',
+    name: 'login',
     component: LoginPage
   },
 ]
