@@ -60,7 +60,7 @@ export const sendRequest = async <T>(
     }
     // 处理网络超时等错误
     const axiosError = error as AxiosError<T>
-    if (axiosError.response?.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/me')) {
+    if ((axiosError.response?.status === 403 || axiosError.response?.status === 401) && !url.includes('/auth/refresh')) {
       // 如果没有正在刷新，则启动刷新并保存 Promise
       if (url.includes('/auth/login')) {
         const responseData = (axiosError.response?.data as { msg?: string })?.msg || axiosError.message || '请求失败'
@@ -74,18 +74,19 @@ export const sendRequest = async <T>(
               refreshRes.access_token &&
               refreshRes.refresh_token
             ) {
+              notifyRefresh(refreshRes.access_token)
               return refreshRes.access_token
             }
             // 刷新失败
             notifyRefresh(null)
             message.error('登录已过期，请重新登录')
-            Router.push('/login')
+            if (!url.includes('/auth/me')) Router.push('/login')
             return null
           })
           .catch((err: unknown) => {
             isRefreshing = false
             notifyRefresh(null)
-            Router.push('/login')
+            if (!url.includes('/auth/me')) Router.push('/login')
             throw err
           })
       }
@@ -96,6 +97,7 @@ export const sendRequest = async <T>(
         return await axiosClient.request({
           ...requestConfig,
           headers: { ...headers, Authorization: `Bearer ${newToken}` },
+          withCredentials: true,
         })
       }
       // 刷新失败且已重定向到登录，上层无需继续处理
@@ -105,7 +107,7 @@ export const sendRequest = async <T>(
       !url.includes('/auth/refresh') && !url.includes('/auth/me')
     ) {
       // 获取错误信息
-      const responseData = (axiosError.response?.data as { msg?: string })?.msg || axiosError.message || '请求失败'
+      const responseData = (axiosError.response?.data as { msg?: string })?.msg || '网络开小差啦，请稍后再试'
       message.error(responseData)
     }
     if (axiosError.response) {
