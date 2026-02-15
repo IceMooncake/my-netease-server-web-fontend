@@ -45,11 +45,16 @@ export default function RegisterPage() {
             console.log('Socket connected');
         });
 
-        socket.on('registration_confirmed', (data: { qq: string }) => {
-            if (data.qq === formData.qq) {
-                alert('验证成功，注册已完成！');
-                router.push('/login');
-            }
+        socket.on('registration_success', (data: { qq: string; success: boolean; message?: string }) => {
+          if (data.qq !== formData.qq) return;
+
+          if (data.success) {
+            alert('验证成功，注册已完成！');
+            router.push('/login');
+            return;
+          }
+
+          alert(data.message || '注册失败，请重试');
         });
 
         socketRef.current = socket;
@@ -78,7 +83,7 @@ export default function RegisterPage() {
           alert('注册成功，请登录');
           router.push('/login');
       }
-    } catch (err) {
+    } catch {
       // Error handles in hook
     }
   }
