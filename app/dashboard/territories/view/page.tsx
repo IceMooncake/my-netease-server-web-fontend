@@ -2,8 +2,8 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { TerritoryService, TerritoryResponse } from '@/app/api';
 import {
     Alert,
@@ -32,12 +32,12 @@ import { getStatusLabel, getStatusTagColor, getTerritoryTypeLabel } from '@/lib/
 
 const { Title, Text } = Typography;
 
-export default function TerritoryDetailPage() {
+function TerritoryDetailContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const params = useParams();
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
   const { message, modal } = App.useApp();
-  const id = params?.id as string;
 
   const [territory, setTerritory] = useState<TerritoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,12 @@ export default function TerritoryDetailPage() {
   }, [isLoading, isAuthenticated, router]);
 
     const loadTerritory = useCallback(async () => {
+    if (!id) {
+        setError('无效的领地ID');
+        setLoading(false);
+        return;
+    }
+
     try {
       setLoading(true);
             setError('');
@@ -85,12 +91,13 @@ export default function TerritoryDetailPage() {
     }, [id]);
 
   useEffect(() => {
-    if (isAuthenticated && id) {
+    if (isAuthenticated) {
             loadTerritory();
     }
-    }, [isAuthenticated, id, loadTerritory]);
+    }, [isAuthenticated, loadTerritory]);
 
   const handleDonate = async () => {
+        if (!id) return;
             const amount = Number(donateAmount);
             if (!amount || amount <= 0) {
                 message.warning('请输入大于 0 的捐赠数量');
@@ -109,6 +116,7 @@ export default function TerritoryDetailPage() {
   };
 
   const handleInvite = async () => {
+      if (!id) return;
       try {
           setIsInviting(true);
           await TerritoryService.postTerritoriesInvite(id, { qq: inviteQQ });
@@ -120,6 +128,7 @@ export default function TerritoryDetailPage() {
   };
 
   const handleUpdateLocation = async () => {
+      if (!id) return;
       try {
           setIsUpdatingLoc(true);
           await TerritoryService.putTerritoriesLocation(id, {
@@ -136,6 +145,7 @@ export default function TerritoryDetailPage() {
   };
 
   const handleLeave = async () => {
+            if (!id) return;
             const confirmed = await new Promise<boolean>((resolve) => {
                 modal.confirm({
                     title: '确定要退出该领地吗？',
@@ -159,6 +169,7 @@ export default function TerritoryDetailPage() {
   };
 
   const handleDelete = async () => {
+            if (!id) return;
             const confirmed = await new Promise<boolean>((resolve) => {
                 modal.confirm({
                     title: '确定要申请删除该领地吗？',
@@ -338,4 +349,12 @@ export default function TerritoryDetailPage() {
       </div>
     </DashboardLayout>
   );
+}
+
+export default function TerritoryDetailPage() {
+    return (
+        <Suspense fallback={<DashboardLayout title="加载中" showBack><Flex justify="center"><Spin size="large"/></Flex></DashboardLayout>}>
+            <TerritoryDetailContent />
+        </Suspense>
+    );
 }

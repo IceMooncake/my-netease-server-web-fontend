@@ -63,7 +63,7 @@ export default function TerritoriesPage() {
         ) : (
             <Space orientation="vertical" size={16} style={{ width: '100%' }}>
               {territories.map((territory) => (
-                <Link key={territory.id} href={`/dashboard/territories/${territory.id}`}>
+                <Link key={territory.id} href={`/dashboard/territories/view?id=${territory.id}`}>
                   <Card hoverable style={{ borderRadius: '12px' }}>
                     <Flex justify="space-between" align="center">
                       <div>
