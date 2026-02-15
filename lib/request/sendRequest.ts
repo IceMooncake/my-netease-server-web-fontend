@@ -52,7 +52,15 @@ export const sendRequest = async <T>(
       withCredentials: true,
     })
 
-    if (res.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/me')) {
+    return res 
+  } catch (error) {
+    // 请求被取消，直接抛出错误
+    if (error instanceof Error && 'code' in error && error.code === 'ERR_CANCELED') {
+      throw error
+    }
+    // 处理网络超时等错误
+    const axiosError = error as AxiosError<T>
+    if (axiosError.response?.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/me')) {
       // 如果没有正在刷新，则启动刷新并保存 Promise
       if (!isRefreshing) {
         isRefreshing = true
@@ -88,24 +96,15 @@ export const sendRequest = async <T>(
         })
       }
       // 刷新失败且已重定向到登录，上层无需继续处理
-      return res
+      return axiosError.response
     } else if (
-      res.status !== 200 &&
+      axiosError.response?.status !== 200 &&
       !url.includes('/auth/refresh') && !url.includes('/auth/me')
     ) {
-      message.error(res.data.message || '操作失败')
+      // 获取错误信息
+      const responseData = (axiosError.response?.data as { msg?: string })?.msg || axiosError.message || '请求失败'
+      message.error(responseData)
     }
-    return res 
-  } catch (error) {
-    // 请求被取消，直接抛出错误
-    if (error instanceof Error && 'code' in error && error.code === 'ERR_CANCELED') {
-      throw error
-    }
-    // 处理网络超时等错误
-    const axiosError = error as AxiosError<T>
-    // 获取错误信息
-    const responseData = (axiosError.response?.data as { msg?: string })?.msg
-    message.error(responseData || '网络超时')
     if (axiosError.response) {
       return axiosError.response
     }

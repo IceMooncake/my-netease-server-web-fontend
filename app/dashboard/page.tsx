@@ -5,14 +5,14 @@ import { DashboardLayout } from '@/components/ui/DashboardLayout';
 import { Card } from '@/components/ui/Card';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TeamService, MyTeamsResponse } from '@/app/api';
+import { TerritoryService, TerritoryListResponse } from '@/app/api';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [teams, setTeams] = useState<MyTeamsResponse>([]);
+  const [territories, setTerritories] = useState<TerritoryListResponse>([]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -24,8 +24,8 @@ export default function DashboardPage() {
     if (isAuthenticated) {
         const loadData = async () => {
              try {
-                const myTeams = await TeamService.getTeamsMine();
-                setTeams(myTeams);
+                const myTerritories = await TerritoryService.getTerritoriesMine();
+                setTerritories(myTerritories);
              } catch (e) {
                  console.error(e);
              }
@@ -37,6 +37,9 @@ export default function DashboardPage() {
   if (isLoading || !user) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
+
+  // Calculate stats
+  const totalTerritories = territories.length;
 
   return (
     <DashboardLayout title="概览">
@@ -73,43 +76,48 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-            <Link href="/dashboard/teams/create" className="block">
+            <Link href="/dashboard/territories/create" className="block">
                 <Card className="h-full flex flex-col items-center justify-center p-6 bg-blue-50 border-blue-100 hover:shadow-md transition-shadow">
-                    <span className="text-2xl mb-2">Build</span>
-                    <span className="font-medium text-blue-700">创建团队</span>
+                    <span className="text-4xl mb-2 text-blue-600">+</span>
+                    <span className="font-medium text-blue-700">创建领地</span>
                 </Card>
             </Link>
-             <Link href="/dashboard/teams" className="block">
+             <Link href="/dashboard/territories" className="block">
                 <Card className="h-full flex flex-col items-center justify-center p-6 bg-green-50 border-green-100 hover:shadow-md transition-shadow">
-                    <span className="text-2xl mb-2">Teams</span>
-                    <span className="font-medium text-green-700">我的团队</span>
+                    <span className="text-2xl mb-2 text-green-600">Map</span>
+                    <span className="font-medium text-green-700">我的领地</span>
                 </Card>
             </Link>
         </div>
 
-        {/* My Teams Preview */}
+        {/* My Territories Preview */}
         <div>
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">我的团队</h3>
-                <Link href="/dashboard/teams" className="text-sm text-blue-600">查看全部</Link>
+                <h3 className="text-lg font-bold text-gray-800">我的领地 ({totalTerritories}/10)</h3>
+                <Link href="/dashboard/territories" className="text-sm text-blue-600">查看全部</Link>
             </div>
-            {teams.length === 0 ? (
+            {territories.length === 0 ? (
                 <Card className="text-center py-8 text-gray-500">
-                    您还没有加入任何团队
+                    您还没有加入任何领地
                 </Card>
             ) : (
                 <div className="space-y-3">
-                    {teams.map(team => (
-                        <Link key={team.id} href={`/dashboard/teams/${team.id}`}>
+                    {territories.slice(0, 3).map(territory => ( // Show only top 3
+                        <Link key={territory.id} href={`/dashboard/territories/${territory.id}`}>
                             <Card className="flex justify-between items-center hover:bg-gray-50 transition-colors">
                                 <div>
-                                    <h4 className="font-bold text-gray-800">{team.name}</h4>
-                                    <p className="text-xs text-gray-500">成员: {team.members_count} | 领地: {team.territories_count}</p>
+                                    <h4 className="font-bold text-gray-800">{territory.name}</h4>
+                                    <div className="flex space-x-2 mt-1">
+                                         <span className="text-xs text-gray-500">面积: {territory.area}</span>
+                                         <Badge variant={territory.status === 'ACTIVE' ? 'success' : 'default'}>
+                                            {territory.status}
+                                         </Badge>
+                                    </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-bold text-blue-600">{team.team_credits} 方块</p>
-                                    <Badge variant={team.owner_id === user.qq ? 'warning' : 'default'}>
-                                        {team.owner_id === user.qq ? '领地主' : '成员'}
+                                    <p className="text-sm font-bold text-blue-600">{territory.credits} 方块</p>
+                                    <Badge variant={territory.owner_id === user.qq ? 'warning' : 'default'} className="mt-1">
+                                        {territory.owner_id === user.qq ? '地主' : '成员'}
                                     </Badge>
                                 </div>
                             </Card>
