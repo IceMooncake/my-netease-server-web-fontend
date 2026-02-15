@@ -12,6 +12,7 @@
     "api:gen": "tsx ./scripts/generate-api/generate-api.ts && tsx ./scripts/generate-api/transform-api-get.ts"
   },
   "dependencies": {
+    "antd": "^6.3.0",
     "axios": "^1.13.5",
     "next": "16.1.6",
     "react": "19.2.3",
