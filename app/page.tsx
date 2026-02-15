@@ -3,6 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { Spin, Typography, Card } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
 
 export default function Home() {
   const router = useRouter();
@@ -21,18 +25,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="flex flex-col items-center p-8 bg-white shadow-xl rounded-2xl">
-        <div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">
-            Ice
+      <Card variant={'borderless'} style={{ boxShadow: 'none', background: 'transparent' }}>
+        <div className="flex flex-col items-center">
+            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-6 text-blue-700 text-2xl font-bold shadow-lg">
+                Ice
+            </div>
+            <Title level={4} style={{ marginBottom: 24, color: '#1f2937' }}>Ice Town</Title>
+            
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} description="正在进入冰雪小镇..." />
         </div>
-        <h1 className="text-xl font-bold text-gray-800 mb-2">Ice Town</h1>
-        <div className="animate-pulse flex space-x-2 items-center text-gray-500 text-sm">
-            <div className="h-2 w-2 bg-blue-600 rounded-full animate-bounce delay-75"></div>
-            <div className="h-2 w-2 bg-blue-600 rounded-full animate-bounce delay-150"></div>
-            <div className="h-2 w-2 bg-blue-600 rounded-full animate-bounce delay-300"></div>
-            <span>正在进入冰雪小镇...</span>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 }

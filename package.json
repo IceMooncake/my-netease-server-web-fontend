@@ -12,6 +12,7 @@
     "api:gen": "tsx ./scripts/generate-api/generate-api.ts && tsx ./scripts/generate-api/transform-api-get.ts"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "antd": "^6.3.0",
     "axios": "^1.13.5",
     "next": "16.1.6",

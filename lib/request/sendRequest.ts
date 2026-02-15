@@ -62,7 +62,10 @@ export const sendRequest = async <T>(
     const axiosError = error as AxiosError<T>
     if (axiosError.response?.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/me')) {
       // 如果没有正在刷新，则启动刷新并保存 Promise
-      if (!isRefreshing) {
+      if (url.includes('/auth/login')) {
+        const responseData = (axiosError.response?.data as { msg?: string })?.msg || axiosError.message || '请求失败'
+      message.error(responseData)
+      } else if (!isRefreshing) {
         isRefreshing = true
         refreshPromise = AuthenticationService.postAuthRefresh()
           .then((refreshRes) => {

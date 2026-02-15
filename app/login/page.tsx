@@ -3,92 +3,95 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { Button, Input, Card, Form, Typography, Flex, message } from 'antd'
+import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons'
 import Link from 'next/link'
+import Image from 'next/image'
+import loginBackground from '@/assets/login-background.png'
+import loginTitle from '@/assets/login-title.png'
+
+const { Title, Text } = Typography
+
+type LoginFormValues = {
+  qq: string
+  password: string
+}
 
 export default function LoginPage() {
-  const { login, isLoading, error } = useAuth()
+  const { login, isLoading } = useAuth()
   const router = useRouter()
+  const [loading, setLoading] = useState(false)
 
-  const [formData, setFormData] = useState({
-    qq: '',
-    password: '',
-  })
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onFinish = async (values: LoginFormValues) => {
+    setLoading(true)
     try {
-      await login(formData.qq, formData.password)
+      await login(values.qq, values.password)
       router.push('/dashboard')
-    } catch (err) {
-      // Error handles in hook
+    } catch {
+       // Error handled
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Ice Town 登录
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            欢迎回来，请登录您的账户
-          </p>
+    <div className="relative h-screen flex items-center justify-center px-4 py-8 overflow-hidden">
+      <Image
+        src={loginBackground}
+        alt="登录背景"
+        fill
+        priority
+        className="object-cover"
+      />
+      <div className="absolute inset-0 bg-black/35" />
+
+      <div className="relative z-10 w-full" style={{ maxWidth: 400 }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <Image
+            src={loginTitle}
+            alt="IceTown"
+            priority
+            style={{ width: '100%', height: 'auto', maxWidth: 360, margin: '0 auto' }}
+          />
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md shadow-sm space-y-4">
-            <Input
-              label="QQ号"
+
+        <Card style={{ width: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <Title level={3} style={{ color: '#1677ff', margin: 5 }}>登录</Title>
+            <Text style={{ color: '#24466f', fontWeight: 500 }}>欢迎回来，请登录以查看租赁服个人信息</Text>
+          </div>
+
+          <Form
+              name="login"
+              initialValues={{ remember: true }}
+              onFinish={onFinish}
+              layout="vertical"
+          >
+            <Form.Item
               name="qq"
-              type="text"
-              required
-              placeholder="请输入QQ号"
-              value={formData.qq}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="密码"
-              name="password"
-              type="password"
-              required
-              placeholder="请输入密码"
-              value={formData.password}
-              onChange={handleInputChange}
-            />
-          </div>
-
-          {error && (
-            <div className="text-red-500 text-sm text-center">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <Button
-              type="submit"
-              fullWidth
-              isLoading={isLoading}
+              rules={[{ required: true, message: '请输入您的QQ号!' }]}
             >
-              登录
-            </Button>
-          </div>
+              <Input prefix={<UserOutlined />} placeholder="QQ号" />
+            </Form.Item>
 
-          <div className="text-center">
-            <Link href="/register" className="text-sm text-blue-600 hover:text-blue-500">
-              还没有账号？去注册
-            </Link>
-          </div>
-        </form>
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: '请输入您的密码!' }]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="密码(不是QQ密码!!!)" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading || isLoading} icon={<LoginOutlined />}>
+                登录
+              </Button>
+            </Form.Item>
+
+            <Flex justify="center">
+              <Text style={{ color: '#24466f' }}>还没有账号？ <Link href="/register" style={{ color: '#1677ff', fontWeight: 600 }}>立即注册</Link></Text>
+            </Flex>
+          </Form>
+        </Card>
       </div>
     </div>
   )

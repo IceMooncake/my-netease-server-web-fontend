@@ -2,36 +2,44 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { useCallback, useEffect, useState } from 'react';
 import { AdminTaskResponse, AdminService } from '@/app/api';
 import { useRouter } from 'next/navigation';
+import { Card, Button, Badge, Tag, Tabs, Spin, message, Typography, Descriptions, Space } from 'antd';
+import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { getAdminTaskTypeLabel, getAdminTaskTypeTagColor, getStatusLabel, getStatusTagColor } from '@/lib/status-display';
+
+const { Paragraph } = Typography;
+
+type AdminFilter = 'PENDING' | 'DONE' | 'IGNORED' | 'REJECTED'
 
 export default function AdminPage() {
     const { isAuthenticated, user, isLoading } = useAuth();
     const router = useRouter();
     const [tasks, setTasks] = useState<AdminTaskResponse[]>([]);
-    const [filter, setFilter] = useState<'PENDING' | 'DONE' | 'IGNORED' | 'REJECTED'>('PENDING');
+    const [filter, setFilter] = useState<AdminFilter>('PENDING');
+    const [loadingTasks, setLoadingTasks] = useState(false);
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) {
                 router.push('/login');
             } else if (user?.is_admin !== 1) {
-                alert('无权限');
                 router.push('/dashboard');
             }
         }
     }, [isLoading, isAuthenticated, user, router]);
 
-    const loadTasks = useCallback(async (status: typeof filter) => {
+    const loadTasks = useCallback(async (status: AdminFilter) => {
+        setLoadingTasks(true);
         try {
-            return await AdminService.getAdminTasks({ status });
+            const data = await AdminService.getAdminTasks({ status });
+            return data;
         } catch (e) {
             console.error(e);
             return [];
+        } finally {
+            setLoadingTasks(false);
         }
     }, []);
 
@@ -46,79 +54,86 @@ export default function AdminPage() {
     }, [user, filter, loadTasks]);
 
     const handleProcess = async (taskId: string, approved: boolean) => {
-        const message = prompt(approved ? '请输入通过备注(可选)' : '请输入拒绝理由(必填)');
-        if (approved === false && !message) return; // Request message for rejection
+        let processMessage = '';
+        if (!approved) {
+             const reason = prompt('请输入拒绝理由(必填)');
+             if (reason === null) return; // Cancelled
+             if (!reason.trim()) {
+                 message.warning('拒绝理由不能为空');
+                 return;
+             }
+             processMessage = reason;
+        } else {
+             const memo = prompt('请输入通过备注(可选)');
+             if (memo === null) return;
+             processMessage = memo || '';
+        }
 
         try {
             await AdminService.postAdminProcess({
                 taskId,
                 approved,
-                message: message || ''
+                message: processMessage
             });
-            alert('操作成功');
+            message.success('操作成功');
             // Manual refresh
             const data = await loadTasks(filter);
             setTasks(data);
-        } catch (e) {
-            alert('操作失败: ' + (e as Error).message);
+        } catch {
         }
     };
 
-    if (isLoading || !user || user.is_admin !== 1) return <div>Checking perms...</div>;
+    if (isLoading || !user || user.is_admin !== 1) return <Spin size="large" style={{ display: 'flex', justifyContent: 'center', marginTop: 100 }} />;
+
+    const renderTask = (task: AdminTaskResponse) => (
+        <Card 
+            key={task.id} 
+            className="mb-4" 
+            hoverable
+            title={<Space><Tag color={getAdminTaskTypeTagColor(task.type)}>{getAdminTaskTypeLabel(task.type)}</Tag><span style={{ fontSize: 14, color: '#999' }}>#{task.id}</span></Space>}
+            extra={<Tag color={getStatusTagColor(task.status)}>{getStatusLabel(task.status)}</Tag>}
+            actions={task.status === 'PENDING' ? [
+                <Button key="approve" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleProcess(task.id, true)}>通过</Button>,
+                <Button key="reject" danger icon={<CloseCircleOutlined />} onClick={() => handleProcess(task.id, false)}>拒绝</Button>
+            ] : []}
+        >
+            <Descriptions column={1} size="small">
+                <Descriptions.Item label="提交时间">{task.created_at}</Descriptions.Item>
+                <Descriptions.Item label="详细数据">
+                     <Paragraph ellipsis={{ rows: 3, expandable: true, symbol: '展开' }} code>
+                        {JSON.stringify(task.payload, null, 2)}
+                     </Paragraph>
+                </Descriptions.Item>
+                {task.processed_by && (
+                    <>
+                        <Descriptions.Item label="处理人">{task.processed_by}</Descriptions.Item>
+                        <Descriptions.Item label="处理时间">{task.processed_at}</Descriptions.Item>
+                    </>
+                )}
+            </Descriptions>
+        </Card>
+    );
 
     return (
         <DashboardLayout title="管理员控制台" showBack>
-             <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
-                {['PENDING', 'DONE', 'REJECTED'].map(status => (
-                    <button
-                        key={status}
-                        onClick={() => setFilter(status as 'PENDING' | 'DONE' | 'IGNORED' | 'REJECTED')}
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            filter === status ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'
-                        }`}
-                    >
-                        {status}
-                    </button>
-                ))}
-            </div>
+            <Tabs 
+                defaultActiveKey="PENDING" 
+                onChange={(key) => setFilter(key as AdminFilter)}
+                items={[
+                    { label: <Badge count={tasks.length} offset={[10, 0]}>待处理</Badge>, key: 'PENDING' },
+                    { label: '已完成', key: 'DONE' },
+                    { label: '已拒绝', key: 'REJECTED' },
+                    { label: '已忽略', key: 'IGNORED' },
+                ]}
+            />
 
-            <div className="space-y-4">
-                {tasks.map(task => (
-                    <Card key={task.id}>
-                        <div className="flex justify-between">
-                            <h4 className="font-bold">{task.type}</h4>
-                            <Badge>{task.status}</Badge>
-                        </div>
-                        <div className="text-xs text-gray-500 my-2">
-                            ID: {task.id} | Date: {task.created_at}
-                        </div>
-                        <div className="bg-gray-50 p-2 text-xs font-mono overflow-auto max-h-32 mb-3">
-                            {JSON.stringify(task.payload, null, 2)}
-                        </div>
-                        
-                        {task.status === 'PENDING' && (
-                            <div className="flex gap-2">
-                                <Button 
-                                    className="flex-1 bg-green-600" 
-                                    onClick={() => handleProcess(task.id, true)}
-                                >
-                                    通过
-                                </Button>
-                                <Button 
-                                    className="flex-1 bg-red-600" 
-                                    onClick={() => handleProcess(task.id, false)}
-                                >
-                                    拒绝
-                                </Button>
-                            </div>
-                        )}
-                        {task.processed_by && (
-                            <div className="text-xs text-gray-400 mt-2 text-right">
-                                处理人: {task.processed_by} At: {task.processed_at}
-                            </div>
-                        )}
-                    </Card>
-                ))}
+            <div className="mt-4">
+                {loadingTasks ? (
+                    <div style={{ textAlign: 'center', padding: 20 }}><Spin /></div>
+                ) : (
+                    tasks.length === 0 ? <div style={{ textAlign: 'center', color: '#999', padding: 20 }}>暂无任务</div> :
+                    tasks.map(renderTask)
+                )}
             </div>
         </DashboardLayout>
     );

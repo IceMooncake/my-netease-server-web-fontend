@@ -2,18 +2,41 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/Badge';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { TerritoryService, TerritoryResponse } from '@/app/api';
+import {
+    Alert,
+    App,
+    Button,
+    Card,
+    Col,
+    Divider,
+    Flex,
+    Input,
+    Row,
+    Space,
+    Spin,
+    Tag,
+    Typography,
+} from 'antd';
+import {
+    DeleteOutlined,
+    EditOutlined,
+    EnvironmentOutlined,
+    HeartOutlined,
+    TeamOutlined,
+    LogoutOutlined,
+} from '@ant-design/icons';
+import { getStatusLabel, getStatusTagColor, getTerritoryTypeLabel } from '@/lib/status-display';
+
+const { Title, Text } = Typography;
 
 export default function TerritoryDetailPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const { message, modal } = App.useApp();
   const id = params?.id as string;
 
   const [territory, setTerritory] = useState<TerritoryResponse | null>(null);
@@ -27,7 +50,7 @@ export default function TerritoryDetailPage() {
   const [inviteQQ, setInviteQQ] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
-  const [locForm, setLocForm] = useState({ x1: 0, z1: 0, x2: 0, z2: 0 });
+  const [locForm, setLocForm] = useState({ x1: '0', z1: '0', x2: '0', z2: '0' });
   const [isUpdatingLoc, setIsUpdatingLoc] = useState(false);
 
   useEffect(() => {
@@ -36,48 +59,50 @@ export default function TerritoryDetailPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  const loadTerritory = async () => {
+    const loadTerritory = useCallback(async () => {
     try {
       setLoading(true);
+            setError('');
       // Since there is no getById, we fetch all and find
       const list = await TerritoryService.getTerritoriesMine();
       const found = list.find(t => t.id === id);
       if (found) {
         setTerritory(found);
-        setLocForm({ x1: found.x1, z1: found.z1, x2: found.x2, z2: found.z2 });
+        setLocForm({ x1: String(found.x1), z1: String(found.z1), x2: String(found.x2), z2: String(found.z2) });
       } else {
-        setError('Territory not found');
+                setTerritory(null);
+                setError('领地未找到或您无访问权限');
       }
     } catch (e: unknown) {
       if (e instanceof Error) {
-          setError(e.message || 'Failed to load territory');
+                setError(e.message || '加载领地失败');
       } else {
-          setError('Failed to load territory: Unknown error');
+                setError('加载领地失败：未知错误');
       }
     } finally {
       setLoading(false);
     }
-  };
+    }, [id]);
 
   useEffect(() => {
     if (isAuthenticated && id) {
-        loadTerritory();
+            loadTerritory();
     }
-  }, [isAuthenticated, id]);
+    }, [isAuthenticated, id, loadTerritory]);
 
   const handleDonate = async () => {
+            const amount = Number(donateAmount);
+            if (!amount || amount <= 0) {
+                message.warning('请输入大于 0 的捐赠数量');
+                return;
+            }
       try {
           setIsDonating(true);
-          await TerritoryService.postTerritoriesDonate(id, { amount: Number(donateAmount) });
+                    await TerritoryService.postTerritoriesDonate(id, { amount });
           setDonateAmount('');
-          alert('捐赠成功');
-          loadTerritory();
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-            alert('捐赠失败: ' + e.message);
-        } else {
-            alert('捐赠失败: 发生未知错误');
-        }
+                    message.success('捐赠成功');
+                    await loadTerritory();
+      } catch {
       } finally {
           setIsDonating(false);
       }
@@ -88,14 +113,8 @@ export default function TerritoryDetailPage() {
           setIsInviting(true);
           await TerritoryService.postTerritoriesInvite(id, { qq: inviteQQ });
           setInviteQQ('');
-          alert('邀请发送成功');
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-            alert('邀请失败: ' + e.message);
-        } else {
-            alert('邀请失败: 发生未知错误');
-        }
-      } finally {
+          message.success('邀请发送成功');
+      } catch {} finally {
           setIsInviting(false);
       }
   };
@@ -109,152 +128,212 @@ export default function TerritoryDetailPage() {
               x2: Number(locForm.x2),
               z2: Number(locForm.z2)
           });
-          alert('位置更新请求已提交，等待管理员审核');
-          loadTerritory();
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-            alert('更新失败: ' + e.message);
-        } else {
-            alert('更新失败: 发生未知错误');
-        }
-      } finally {
+                    message.success('位置更新请求已提交，等待管理员审核');
+                    await loadTerritory();
+      } catch {} finally {
           setIsUpdatingLoc(false);
       }
   };
 
   const handleLeave = async () => {
-      if (!confirm('确定要离开该领地吗？将扣除您在该领地的所有积分并只返还70%。')) return;
+            const confirmed = await new Promise<boolean>((resolve) => {
+                modal.confirm({
+                    title: '确定要退出该领地吗？',
+                    content: '退出后会扣除您在该领地的全部捐献额度，返还 90% 至个人额度。',
+                    okText: '确认退出',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true },
+                    onOk: () => resolve(true),
+                    onCancel: () => resolve(false),
+                });
+            });
+            if (!confirmed) return;
       try {
           // Remove self
           if (!user) return;
           await TerritoryService.deleteTerritoriesMembers(id, { qq: user.qq });
-          alert('已退出领地');
+                    message.success('已退出领地');
           router.push('/dashboard/territories');
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-            alert('退出失败: ' + e.message);
-        } else {
-            alert('退出失败: 发生未知错误');
-        }
+      } catch {
       }
   };
 
   const handleDelete = async () => {
-      if (!confirm('确定要申请删除该领地吗？此操作不可撤销。')) return;
+            const confirmed = await new Promise<boolean>((resolve) => {
+                modal.confirm({
+                    title: '确定要申请删除该领地吗？',
+                    content: '此操作不可撤销，提交后等待管理员审核。',
+                    okText: '确认提交',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true },
+                    onOk: () => resolve(true),
+                    onCancel: () => resolve(false),
+                });
+            });
+            if (!confirmed) return;
       try {
           await TerritoryService.deleteTerritories(id);
-          alert('删除申请已提交');
-          loadTerritory(); // Status might change?
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-            alert('操作失败: ' + e.message);
-        } else {
-            alert('操作失败: 发生未知错误');
-        }
+                    message.success('删除申请已提交');
+                    router.push('/dashboard/territories');
+      } catch {
       }
   };
 
-  if (isLoading || loading) return <div className="p-8 text-center">Loading...</div>;
-  if (!territory) return <div className="p-8 text-center text-red-500">领地未找到或无法访问</div>;
+    if (isLoading || loading) {
+        return (
+            <DashboardLayout title="领地详情" showBack>
+                <Flex justify="center" align="center" style={{ minHeight: 280 }}>
+                    <Spin size="large" />
+                </Flex>
+            </DashboardLayout>
+        );
+    }
+
+    if (!territory) {
+        return (
+            <DashboardLayout title="领地详情" showBack>
+                <Alert type="error" showIcon title={error || '领地未找到或无法访问'} />
+            </DashboardLayout>
+        );
+    }
 
   const isOwner = user?.qq === territory.owner_id;
 
   return (
     <DashboardLayout title={territory.name} showBack>
       <div className="space-y-6">
-        {/* Info Card */}
-        <Card>
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h2 className="text-xl font-bold">{territory.name}</h2>
-                    <p className="text-sm text-gray-500">ID: {territory.id}</p>
-                </div>
-                <div className="flex flex-col items-end">
-                    <Badge variant={territory.status === 'ACTIVE' ? 'success' : 'default'} className="mb-1">
-                        {territory.status}
-                    </Badge>
-                    <Badge>{territory.type}</Badge>
-                </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 py-4 border-t border-gray-100">
-                <div>
-                    <p className="text-sm text-gray-500">当前积分</p>
-                    <p className="text-2xl font-bold text-blue-600">{territory.credits}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500">面积 / 成本</p>
-                    <p className="text-lg font-semibold">{territory.area} / {territory.cost}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500">坐标 X</p>
-                    <p>{territory.x1} ~ {territory.x2}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500">坐标 Z</p>
-                    <p>{territory.z1} ~ {territory.z2}</p>
-                </div>
-            </div>
-        </Card>
-
-        {/* Actions for Member: Donate */}
-        <Card title="积分捐赠">
-             <div className="flex gap-2">
-                 <Input 
-                    type="number" 
-                    placeholder="输入数量" 
-                    value={donateAmount}
-                    onChange={e => setDonateAmount(e.target.value)}
-                 />
-                 <Button onClick={handleDonate} isLoading={isDonating}>捐赠</Button>
-             </div>
-             <p className="text-xs text-gray-500 mt-2">
-                 离开领地将返还70%积分，但该领地会扣除100%您捐赠的积分。
-             </p>
-        </Card>
-
-        {/* Owner Actions */}
-        {isOwner && (
-            <>
-                <Card title="领地管理">
-                    <div className="space-y-4">
+                <Card
+                    variant={'borderless'}
+                    style={{
+                        borderRadius: 16,
+                        boxShadow: '0 10px 28px rgba(88, 160, 232, 0.18)',
+                        border: '1px solid rgba(126, 190, 247, 0.35)',
+                        marginBottom: 24,
+                    }}
+                >
+                    <Flex justify="space-between" align="flex-start" gap={12}>
                         <div>
-                            <label className="block text-sm font-medium mb-1">调整位置 (X1, Z1) to (X2, Z2)</label>
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                <Input type="number" placeholder="X1" value={locForm.x1} onChange={e => setLocForm({...locForm, x1: Number(e.target.value)})} />
-                                <Input type="number" placeholder="Z1" value={locForm.z1} onChange={e => setLocForm({...locForm, z1: Number(e.target.value)})} />
-                                <Input type="number" placeholder="X2" value={locForm.x2} onChange={e => setLocForm({...locForm, x2: Number(e.target.value)})} />
-                                <Input type="number" placeholder="Z2" value={locForm.z2} onChange={e => setLocForm({...locForm, z2: Number(e.target.value)})} />
-                            </div>
-                            <Button onClick={handleUpdateLocation} isLoading={isUpdatingLoc}>更新位置/范围</Button>
-                             <p className="text-xs text-gray-500 mt-1">更新位置需要管理员审核，且会重新计算成本。</p>
+                            <Title level={4} style={{ margin: 0, color: '#173f6f' }}>{territory.name}</Title>
+                            <Text style={{ color: '#44658a' }}>ID: {territory.id}</Text>
                         </div>
-                        
-                        <div className="border-t pt-4">
-                            <label className="block text-sm font-medium mb-1">邀请成员</label>
-                            <div className="flex gap-2">
-                                <Input 
-                                    placeholder="输入对方QQ号" 
-                                    value={inviteQQ}
-                                    onChange={e => setInviteQQ(e.target.value)}
-                                />
-                                <Button onClick={handleInvite} isLoading={isInviting} variant="secondary">邀请</Button>
-                            </div>
-                        </div>
+                        <Space orientation="vertical" size={6}>
+                            <Tag color={getStatusTagColor(territory.status)}>{territory.area === 0 ? '领地待确定范围' : getStatusLabel(territory.status)}</Tag>
+                            <Tag color="red">{getTerritoryTypeLabel(territory.type)}</Tag>
+                        </Space>
+                    </Flex>
 
-                         <div className="border-t pt-4">
-                            <Button onClick={handleDelete} variant="danger" fullWidth>申请删除领地</Button>
-                        </div>
-                    </div>
+                    <Divider style={{ margin: '14px 0' }} />
+
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} sm={12}>
+                            <Text style={{ color: '#43658e' }}>领地内剩余可用方块额度</Text>
+                            <Title level={3} style={{ margin: '6px 0 0', color: '#1f63a8' }}>{territory.credits}</Title>
+                        </Col>
+                        {territory.area !== 0 && <Col xs={24} sm={12}>
+                            <Text style={{ color: '#43658e' }}><EnvironmentOutlined /> 坐标范围 X Z</Text>
+                            <div>({territory.x1},{territory.z1}) ~ ({territory.x2},{territory.z2})</div>
+                        </Col>}
+                    </Row>
                 </Card>
-            </>
+
+                <Card title={<Space><HeartOutlined /><span>额度贡献(个人额度 -&gt; 领地额度)</span></Space>} variant={'borderless'} style={{ borderRadius: 16, marginBottom: 24 }}>
+                    <div style={{ marginBottom: 16 }}>
+                        <Text style={{ color: '#43658e' }}>您的个人方块额度</Text>
+                        <Title level={4} style={{ margin: '4px 0 0', color: '#1f63a8' }}>{user?.personal_credits || 0}</Title>
+                    </div>
+                         <Space.Compact block>
+                             <Input
+                                 type="number"
+                                 placeholder="输入捐赠数量"
+                                 value={donateAmount}
+                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDonateAmount(e.target.value)}
+                             />
+                             <Button type="primary" loading={isDonating} onClick={handleDonate}>捐赠</Button>
+                         </Space.Compact>
+                         <Text style={{ display: 'block', marginTop: 10, color: '#4d6e95', fontSize: 12 }}>
+                             退出领地时返还个人 90% 已捐赠额度<br />同时领地额度会减少 100% 您的捐赠量
+                         </Text>
+        </Card>
+
+        {isOwner && (
+                    <Card title={<Space><EditOutlined /><span>领地管理</span></Space>} variant={'borderless'} style={{ borderRadius: 16 }}>
+                        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+                            <div>
+                                <Text strong style={{ color: '#24466f' }}>调整范围(对角线坐标)</Text>
+                                <div style={{ marginTop: 12 }}>
+                                    <Text style={{ display: 'block', marginBottom: 6, fontSize: 13, color: '#666' }}>起点坐标 (X1, Z1)</Text>
+                                    <Space.Compact block style={{ marginBottom: 12 }}>
+                                        <Input
+                                            prefix={<span style={{ color: '#999', marginRight: 4 }}>X</span>}
+                                            type="number"
+                                            placeholder="X1"
+                                            value={locForm.x1}
+                                            onChange={(e) => setLocForm({ ...locForm, x1: e.target.value })}
+                                        />
+                                        <Input
+                                            prefix={<span style={{ color: '#999', marginRight: 4 }}>Z</span>}
+                                            type="number"
+                                            placeholder="Z1"
+                                            value={locForm.z1}
+                                            onChange={(e) => setLocForm({ ...locForm, z1: e.target.value })}
+                                        />
+                                    </Space.Compact>
+
+                                    <Text style={{ display: 'block', marginBottom: 6, fontSize: 13, color: '#666' }}>终点坐标 (X2, Z2)</Text>
+                                    <Space.Compact block>
+                                        <Input
+                                            prefix={<span style={{ color: '#999', marginRight: 4 }}>X</span>}
+                                            type="number"
+                                            placeholder="X2"
+                                            value={locForm.x2}
+                                            onChange={(e) => setLocForm({ ...locForm, x2: e.target.value })}
+                                        />
+                                        <Input
+                                            prefix={<span style={{ color: '#999', marginRight: 4 }}>Z</span>}
+                                            type="number"
+                                            placeholder="Z2"
+                                            value={locForm.z2}
+                                            onChange={(e) => setLocForm({ ...locForm, z2: e.target.value })}
+                                        />
+                                    </Space.Compact>
+                                </div>
+                                <Button type="primary" loading={isUpdatingLoc} onClick={handleUpdateLocation} style={{ marginTop: 16 }} block>
+                                    更新位置/范围
+                                </Button>
+                                <Text style={{ display: 'block', marginTop: 8, color: '#4d6e95', fontSize: 12 }}>
+                                    更新位置需要管理员审核，且会重新计算领地额度。
+                                </Text>
+                            </div>
+
+                            <Divider style={{ margin: '0' }} />
+
+                            <div>
+                                <Text strong style={{ color: '#24466f' }}><TeamOutlined /> 邀请成员</Text>
+                                <Space.Compact block style={{ marginTop: 10 }}>
+                                    <Input
+                                        placeholder="输入对方 QQ 号"
+                                        value={inviteQQ}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInviteQQ(e.target.value)}
+                                    />
+                                    <Button loading={isInviting} onClick={handleInvite}>邀请</Button>
+                                </Space.Compact>
+                            </div>
+
+                            <Divider style={{ margin: '0' }} />
+
+                            <Button danger icon={<DeleteOutlined />} onClick={handleDelete} block>
+                                申请删除领地
+                            </Button>
+                        </Space>
+                    </Card>
         )}
 
-        {/* Leave Button */}
         {!isOwner && (
-             <div className="py-4">
-                 <Button onClick={handleLeave} variant="danger" fullWidth>退出领地</Button>
-             </div>
+                    <Card variant={'borderless'} style={{ borderRadius: 16 }}>
+                        <Button danger icon={<LogoutOutlined />} onClick={handleLeave} block>
+                            退出领地
+                        </Button>
+                    </Card>
         )}
       </div>
     </DashboardLayout>

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eef6ff;
+  --foreground: #1f2a44;
 }
 
 @theme inline {
@@ -14,8 +14,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #e8f3ff;
+    --foreground: #1f2a44;
   }
 }
 
@@ -23,4 +23,87 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(167, 215, 255, 0.55), transparent 30%),
+    radial-gradient(circle at 80% 0%, rgba(194, 230, 255, 0.6), transparent 34%),
+    radial-gradient(circle at 95% 90%, rgba(180, 222, 255, 0.38), transparent 30%),
+    linear-gradient(165deg, #f8fcff 0%, #edf6ff 45%, #eaf4ff 100%);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04));
+  z-index: -1;
+}
+
+.ant-layout {
+  background: transparent !important;
+}
+
+.ant-card,
+.ant-modal-content,
+.ant-popover-inner,
+.ant-dropdown .ant-dropdown-menu {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.48) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 12px 32px rgba(73, 149, 230, 0.16) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-input-number,
+.ant-picker {
+  border-color: rgba(124, 188, 255, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.ant-btn-default,
+.ant-btn-primary {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ant-btn-primary {
+  box-shadow: 0 10px 20px rgba(109, 181, 255, 0.28) !important;
+}
+
+.ant-typography,
+.ant-form-item-label > label,
+.ant-menu,
+.ant-table {
+  color: var(--foreground);
+}
+
+.compact-register-form.ant-form-vertical .ant-form-item-label {
+  padding: 0 0 4px;
+}
+
+.compact-register-form.ant-form-vertical .ant-form-item-label > label {
+  height: auto;
+  min-height: 0;
+  line-height: 1.25;
+  font-size: 13px;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: inherit;
+  caret-color: inherit;
+  -webkit-box-shadow: 0 0 0 1000px #f5f6f7 inset;
+  box-shadow: 0 0 0 1000px #f5f6f7 inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
