@@ -7,6 +7,7 @@ import { Router } from '@/lib'
 import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import axios from 'axios'
 import FormData from 'form-data'
+import { message } from 'antd'
 
 // 刷新 token 锁与订阅队列，确保并发请求只触发一次刷新
 let isRefreshing = false
@@ -51,7 +52,7 @@ export const sendRequest = async <T>(
       withCredentials: true,
     })
 
-    if (res.data.code === 401 && !url.includes('/api/auth/refreshToken')) {
+    if (res.status === 401 && !url.includes('/auth/refresh')) {
       // 如果没有正在刷新，则启动刷新并保存 Promise
       if (!isRefreshing) {
         isRefreshing = true
@@ -66,7 +67,7 @@ export const sendRequest = async <T>(
             }
             // 刷新失败
             notifyRefresh(null)
-            // message.error('登录已过期，请重新登录')
+            message.error('登录已过期，请重新登录')
             Router.push('/login')
             return null
           })
@@ -89,14 +90,12 @@ export const sendRequest = async <T>(
       // 刷新失败且已重定向到登录，上层无需继续处理
       return res
     } else if (
-      Number.isInteger(res.data.code) &&
-      res.data.code !== 200 &&
-      !url.includes('/api/auth/refreshToken') &&
-      !url.includes('/api/alert/testPush')
+      res.status !== 200 &&
+      !url.includes('/api/auth/refresh')
     ) {
-      // message.error(res.data.message || '操作失败')
+      message.error(res.data.message || '操作失败')
     }
-    return res
+    return res 
   } catch (error) {
     // 请求被取消，直接抛出错误
     if (error instanceof Error && 'code' in error && error.code === 'ERR_CANCELED') {
@@ -104,7 +103,9 @@ export const sendRequest = async <T>(
     }
     // 处理网络超时等错误
     const axiosError = error as AxiosError<T>
-    // message.error('网络超时')
+    // 获取错误信息
+    const responseData = (axiosError.response?.data as { msg?: string })?.msg
+    message.error(responseData || '网络超时')
     if (axiosError.response) {
       return axiosError.response
     }
