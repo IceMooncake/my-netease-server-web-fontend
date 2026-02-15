@@ -52,7 +52,7 @@ export const sendRequest = async <T>(
       withCredentials: true,
     })
 
-    if (res.status === 401 && !url.includes('/auth/refresh')) {
+    if (res.status === 401 && !url.includes('/auth/refresh') && !url.includes('/auth/me')) {
       // 如果没有正在刷新，则启动刷新并保存 Promise
       if (!isRefreshing) {
         isRefreshing = true
@@ -91,7 +91,7 @@ export const sendRequest = async <T>(
       return res
     } else if (
       res.status !== 200 &&
-      !url.includes('/api/auth/refresh')
+      !url.includes('/auth/refresh') && !url.includes('/auth/me')
     ) {
       message.error(res.data.message || '操作失败')
     }
