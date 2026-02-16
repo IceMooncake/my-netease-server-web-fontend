@@ -16,6 +16,7 @@ const { Title, Text } = Typography
 type RegisterFormValues = {
     qq: string
     password: string
+    nick_name: string
 }
 
 export default function RegisterPage() {
@@ -63,7 +64,7 @@ export default function RegisterPage() {
 
     const onFinish = async (values: RegisterFormValues) => {
     try {
-      const res = await register(values.qq, values.password);
+      const res = await register(values.qq, values.password, values.nick_name);
       if (res && res.code) {
           setVerificationCode(res.code);
       } else {
@@ -87,15 +88,6 @@ export default function RegisterPage() {
             <div className="absolute inset-0 bg-black/35" />
 
             <div className="relative z-10 w-full" style={{ maxWidth: 480 }}>
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <Image
-                        src={loginTitle}
-                        alt="IceTown"
-                        priority
-                        style={{ width: '100%', height: 'auto', maxWidth: 360, margin: '0 auto' }}
-                    />
-                </div>
-
                 <Card style={{ width: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '16px' }}>
                     <div style={{ textAlign: 'center', marginBottom: 24 }}>
                         <Title level={3} style={{ color: '#1677ff', margin: 5 }}>注册</Title>
@@ -121,6 +113,18 @@ export default function RegisterPage() {
                 ]}
             >
                 <Input prefix={<UserOutlined />} placeholder="QQ号" />
+            </Form.Item>
+
+            <Form.Item
+                name="nick_name"
+                label="游戏内昵称(每月只能改一次哦)"
+                style={{ marginBottom: 5 }}
+                rules={[
+                    { required: true, message: '请输入您的昵称!' },
+                    { min: 2, message: '昵称至少2个字符' }
+                ]}
+            >
+                <Input prefix={<UserOutlined />} placeholder="昵称" />
             </Form.Item>
 
             <Form.Item

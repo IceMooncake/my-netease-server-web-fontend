@@ -13,7 +13,7 @@ interface AuthState {
 interface UseAuthReturn extends AuthState {
   login: (qq: string, password: string) => Promise<void>
   logout: () => void
-  register: (qq: string, password: string) => Promise<{ success: boolean; code: string }>
+  register: (qq: string, password: string, nick_name: string) => Promise<{ success: boolean; code: string }>
   refreshProfile: () => Promise<void>
 }
 
@@ -86,10 +86,10 @@ export function useAuth(): UseAuthReturn {
     router.push('/login');
   }, [router])
 
-  const register = useCallback(async (qq: string, password: string) => {
+  const register = useCallback(async (qq: string, password: string, nick_name: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     try {
-      const response = await AuthenticationService.postAuthRegister({ qq, password })
+      const response = await AuthenticationService.postAuthRegister({ qq, password, nick_name })
       setState(prev => ({ ...prev, isLoading: false }))
       return response
     } catch (err: unknown) {
