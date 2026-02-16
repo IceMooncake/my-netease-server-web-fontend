@@ -13,7 +13,7 @@ import { message } from 'antd'
 let isRefreshing = false
 let refreshPromise: Promise<string | null> | null = null
 const refreshSubscribers: Array<(token: string | null) => void> = []
-OpenAPI.BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000/api'
+OpenAPI.BASE = process.env.NEXT_PUBLIC_API_BASE || ''
 console.log('API BASE:', OpenAPI.BASE)
 
 const notifyRefresh = (token: string | null) => {

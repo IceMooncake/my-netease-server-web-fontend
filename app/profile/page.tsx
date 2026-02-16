@@ -45,7 +45,7 @@ export default function ProfilePage() {
     return (
         <DashboardLayout title="个人中心" showBack>
             <div className="space-y-4">
-                <Card variant={'borderless'} style={{ textAlign: 'center', borderRadius: '16px' }}>
+                <Card variant={'borderless'} style={{ textAlign: 'center', borderRadius: '16px', marginBottom: 24 }}>
                     <Avatar size={80} style={{ backgroundColor: '#1890ff', marginBottom: 16 }} icon={<UserOutlined />} />
                     <Title level={3} style={{ marginBottom: 4 }}>{user.nick_name || user.qq}</Title>
                     <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>QQ: {user.qq}</Text>

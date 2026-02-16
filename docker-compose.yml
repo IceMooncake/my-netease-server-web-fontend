@@ -1,0 +1,37 @@
+# Docker Compose for Minecraft to QQ Manager Frontend (Web App)
+version: '3.8'
+
+services:
+  # The web frontend service
+  web:
+    build: .
+    ports:
+      - "443:443" # Map host port 443 to container port 443 for HTTPS
+      - "80:80"   # Also expose 80 for HTTP redirect to HTTPS
+    volumes:
+      # Optional: Mount custom nginx config without rebuild
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    environment:
+      # These won't affect static build, but kept for clarity
+      - NODE_ENV=production
+    restart: unless-stopped
+    # Removed depends_on since backend is not in this compose
+    networks:
+      - mc-qq-net
+
+  # Assuming you have the backend service defined somewhere (e.g. from the provided docker-compose)
+  # But since you asked for a docker-compose for THIS repo (frontend), we reference 'app' assuming it's merged or external.
+  # The user likely wants to combine this with their backend compose file.
+
+  # Dummy minimal app service definition if not merged:
+  # app:
+  #   image: your-backend-image
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - mc-qq-net
+
+networks:
+  mc-qq-net:
+    driver: bridge
+

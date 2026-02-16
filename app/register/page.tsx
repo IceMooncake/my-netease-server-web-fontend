@@ -30,7 +30,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (verificationCode) {
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000/api';
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE || '';
         const socketUrl = apiBase.replace(/\/api\/?$/, '');
         
         const socket = io(socketUrl, {
