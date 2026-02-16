@@ -40,7 +40,8 @@ export default function LoginPage() {
         src={loginBackground}
         alt="登录背景"
         fill
-        priority
+        loading="lazy"
+        fetchPriority="low"
         className="object-cover"
       />
       <div className="absolute inset-0 bg-black/35" />
@@ -50,7 +51,8 @@ export default function LoginPage() {
           <Image
             src={loginTitle}
             alt="IceTown"
-            priority
+            loading="lazy"
+            fetchPriority="low"
             style={{ width: '100%', height: 'auto', maxWidth: 360, margin: '0 auto' }}
           />
         </div>
