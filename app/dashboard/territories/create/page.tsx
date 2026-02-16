@@ -32,7 +32,7 @@ export default function CreateTerritoryPage() {
           type
       });
       message.success('领地创建成功！');
-      router.push(`/dashboard/territories/${result.id}`);
+      router.push(`/dashboard/territories/view?id=${result.id}`);
     } catch {
     } finally {
       setIsSubmitting(false);

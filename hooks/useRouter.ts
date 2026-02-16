@@ -39,7 +39,7 @@ export function useNavigation() {
     refresh: () => router.refresh(),
 
     // 工具方法
-    goToTerritory: (id: string | number) => router.push(`/territories/${id}`),
+    goToTerritory: (id: string | number) => router.push(`/dashboard/territories/view?id=${id}`),
     goToProposal: (id: string | number) => router.push(`/proposals/${id}`),
   }
 }

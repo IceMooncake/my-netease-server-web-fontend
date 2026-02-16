@@ -164,7 +164,7 @@ export default function DashboardPage() {
                                      <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>面积</Text>
                                      <div style={{ fontWeight: 600 }}>{item.area}</div>
                                  </div>
-                                 <Link href={`/dashboard/territories/${item.id}`}>
+                                 <Link href={`/dashboard/territories/view?id=${item.id}`}>
                                      <Button size="small" type="link">查看 <RightOutlined /></Button>
                                  </Link>
                              </Flex>
