@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TerritoryService, TerritoryListResponse, InvitationListResponse } from '@/app/api';
+import { TerritoryService, NotificationService, TerritoryListResponse, InvitationListResponse, NotificationListResponse } from '@/app/api';
 import Link from 'next/link';
 import { Card, Avatar, Button, Row, Col, Spin, Flex, Typography, Tag, Space, Alert } from 'antd';
 import { UserOutlined, SettingOutlined, PlusOutlined, AppstoreOutlined, RightOutlined } from '@ant-design/icons';
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [territories, setTerritories] = useState<TerritoryListResponse>([]);
   const [invitations, setInvitations] = useState<InvitationListResponse>([]);
+  const [notifications, setNotifications] = useState<NotificationListResponse>([]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -28,12 +29,14 @@ export default function DashboardPage() {
     if (isAuthenticated) {
       const loadData = async () => {
         try {
-          const [myTerritories, myInvitations] = await Promise.all([
+          const [myTerritories, myInvitations, myNotifications] = await Promise.all([
             TerritoryService.getTerritoriesMine(),
             TerritoryService.getTerritoriesInvitationsMine(),
+            NotificationService.getNotifications(),
           ]);
           setTerritories(myTerritories);
           setInvitations(myInvitations);
+          setNotifications(myNotifications);
         } catch (e) {
           console.error(e);
         }
@@ -51,6 +54,19 @@ export default function DashboardPage() {
   return (
     <DashboardLayout title="概览">
       <div className="space-y-6">
+        {notifications.length > 0 && (
+          <Alert
+            title={`您有 ${notifications.length} 条未读消息`}
+            type="warning"
+            showIcon
+            style={{ borderRadius: 12, border: '1px solid #ffe58f', backgroundColor: '#fffbe6', marginBottom: 12 }}
+            action={
+              <Link href="/dashboard/notifications">
+                <Button size="small" type="primary" danger>查看消息</Button>
+              </Link>
+            }
+          />
+        )}
         {invitations.length > 0 && (
           <Alert
             title={`您有 ${invitations.length} 个待处理的领地邀请`}
