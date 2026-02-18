@@ -3,12 +3,12 @@
 import { useAuth } from '@/hooks/useAuth';
 import { AuthenticationService } from '@/app/api';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { Card, Button, Avatar, Typography, Tag, Form, Input, App, Spin, Alert } from 'antd';
-import { UserOutlined, LogoutOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Button, Avatar, Typography, Tag, Form, Input, App, Spin, Alert, Modal } from 'antd';
+import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
 import { getStatusLabel, getStatusTagColor } from '@/lib/status-display';
 import { useState, useMemo } from 'react';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 export default function ProfilePage() {
     const { message } = App.useApp();
@@ -28,16 +28,32 @@ export default function ProfilePage() {
     }, [user?.next_nickname_update_at]);
 
     const handleUpdateNickname = async (values: { nick_name: string }) => {
-        try {
-            setUpdating(true);
-            await AuthenticationService.patchAuthMeNickname({ nick_name: values.nick_name });
-            message.success('昵称修改成功');
-            await refreshProfile();
-            form.resetFields();
-        } catch {
-        } finally {
-            setUpdating(false);
+        const newNick = values.nick_name?.trim();
+        const currentNick = user?.nick_name ?? '';
+        if (!newNick) return;
+        if (newNick === currentNick) {
+            form.setFields([{ name: 'nick_name', errors: ['新昵称不能与旧昵称一致'] }]);
+            return;
         }
+
+        Modal.confirm({
+            title: '确认修改昵称',
+            content: <div><span style={{ textDecoration: 'line-through' }}>{currentNick}</span> → <span style={{ fontWeight: 'bold' }}>{newNick}</span></div>,
+            okText: '确认',
+            cancelText: '取消',
+            onOk: async () => {
+                try {
+                    setUpdating(true);
+                    await AuthenticationService.patchAuthMeNickname({ nick_name: newNick });
+                    message.success('昵称修改成功');
+                    await refreshProfile();
+                    form.resetFields();
+                } catch {
+                } finally {
+                    setUpdating(false);
+                }
+            }
+        });
     };
 
     if (!user) return <Spin size="large" style={{ display: 'flex', justifyContent: 'center', marginTop: 100 }} />;
