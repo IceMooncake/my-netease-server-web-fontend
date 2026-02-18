@@ -171,19 +171,11 @@ export default function RegisterPage() {
             </Flex>
             </Form>
           ) : (
-            <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-                <Alert
-                    message="验证步骤"
-                    description="为了验证如果您是该QQ号的主人，请按照以下步骤操作。"
-                    type="info"
-                    showIcon
-                />
-                
+            <Space orientation="vertical" size="large" style={{ width: '100%' }}> 
                 <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 text-center">
-                    <Text strong style={{ fontSize: 16 }}>请使用QQ发送以下验证码给机器人：</Text>
+                    <Text strong style={{ fontSize: 16 }}>为了验证如果您是该QQ号的主人。<br />请使用QQ在群内发送以下验证码：</Text>
                     <Divider style={{ margin: '12px 0' }} />
                     <Title level={1} copyable style={{ color: '#1890ff', margin: 0 }}>{verificationCode}</Title>
-                    <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>机器人QQ: 123456789 (示例)</Text>
                 </div>
 
                 <div className="flex justify-center items-center gap-2 text-gray-500">
