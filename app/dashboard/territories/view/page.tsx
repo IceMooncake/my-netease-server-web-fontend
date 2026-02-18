@@ -33,7 +33,7 @@ import { getStatusLabel, getStatusTagColor, getTerritoryTypeLabel } from '@/lib/
 const { Title, Text } = Typography;
 
 function TerritoryDetailContent() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
@@ -108,7 +108,8 @@ function TerritoryDetailContent() {
                     await TerritoryService.postTerritoriesDonate(id, { amount });
           setDonateAmount('');
                     message.success('捐赠成功');
-                    await loadTerritory();
+                    await refreshProfile(); // 更新个人额度
+                    setTerritory(prev => prev ? { ...prev, credits: prev.credits + amount } : null); // 更新领地额度
       } catch {
       } finally {
           setIsDonating(false);
