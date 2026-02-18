@@ -73,7 +73,7 @@ export default function CreateTerritoryPage() {
                             onClick={() => setType('NO_ENTRY')}
                         >
                             <StopOutlined style={{ fontSize: 24, color: type === 'NO_ENTRY' ? '#1890ff' : '#8c8c8c' }} />
-                            <div style={{ marginTop: 8, fontWeight: 'bold' }}>完全禁入</div>
+                            <div style={{ marginTop: 8, fontWeight: 'bold' }}>禁止进入</div>
                             <div style={{ fontSize: 12, color: '#8c8c8c' }}>除成员外禁止进入</div>
                         </Card>
                     </Col>
