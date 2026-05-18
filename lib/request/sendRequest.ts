@@ -107,7 +107,9 @@ export const sendRequest = async <T>(
       !url.includes('/auth/refresh') && !url.includes('/auth/me')
     ) {
       // 获取错误信息
-      const responseData = (axiosError.response?.data as { msg?: string })?.msg || '网络开小差啦，请稍后再试'
+      const responseData = (axiosError.response?.data as { msg?: string })?.msg 
+        || axiosError.response?.data as string 
+        || '网络开小差啦，请稍后再试'
       message.error(responseData)
     }
     if (axiosError.response) {
