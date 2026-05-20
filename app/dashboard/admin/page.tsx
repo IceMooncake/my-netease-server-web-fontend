@@ -20,6 +20,16 @@ export default function AdminPage() {
     const [filter, setFilter] = useState<AdminFilter>('PENDING');
     const [loadingTasks, setLoadingTasks] = useState(false);
 
+    const tabItems = [
+        { key: 'PENDING', label: '待处理' },
+        { key: 'DONE', label: '已完成' },
+        { key: 'REJECTED', label: '已拒绝' },
+        { key: 'IGNORED', label: '已忽略' },
+    ].map(({ key, label }) => ({
+        key,
+        label: filter === key ? <Badge count={tasks.length} offset={[10, 0]}>{label}</Badge> : label,
+    }));
+
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) {
@@ -117,14 +127,9 @@ export default function AdminPage() {
     return (
         <DashboardLayout title="管理员控制台" showBack>
             <Tabs 
-                defaultActiveKey="PENDING" 
+                activeKey={filter}
                 onChange={(key) => setFilter(key as AdminFilter)}
-                items={[
-                    { label: <Badge count={tasks.length} offset={[10, 0]}>待处理</Badge>, key: 'PENDING' },
-                    { label: '已完成', key: 'DONE' },
-                    { label: '已拒绝', key: 'REJECTED' },
-                    { label: '已忽略', key: 'IGNORED' },
-                ]}
+                items={tabItems}
             />
 
             <div className="mt-4">
