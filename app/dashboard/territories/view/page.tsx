@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useMyTerritories, useDonate, useUpdateLocation, useInviteMember, useRequestDeleteTerritory, useRemoveMember } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { TerritoryService, TerritoryResponse } from '@/app/api';
 import {
     Alert,
     App,
@@ -39,19 +38,24 @@ function TerritoryDetailContent() {
   const id = searchParams.get('id');
   const { message, modal } = App.useApp();
 
-  const [territory, setTerritory] = useState<TerritoryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: territories = [], isLoading: loadingTerritories } = useMyTerritories();
+
+  const territory = useMemo(() => {
+    if (!id) return null;
+    return territories.find((t: typeof territories[number]) => t.id === id) ?? null;
+  }, [territories, id]);
 
   // Action states
   const [donateAmount, setDonateAmount] = useState('');
-  const [isDonating, setIsDonating] = useState(false);
-  
   const [inviteQQ, setInviteQQ] = useState('');
-  const [isInviting, setIsInviting] = useState(false);
-
   const [locForm, setLocForm] = useState({ x1: '0', z1: '0', x2: '0', z2: '0' });
-  const [isUpdatingLoc, setIsUpdatingLoc] = useState(false);
+
+  // Mutations
+  const donateMutation = useDonate();
+  const updateLocationMutation = useUpdateLocation();
+  const inviteMutation = useInviteMember();
+  const deleteMutation = useRequestDeleteTerritory();
+  const removeMemberMutation = useRemoveMember();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -59,139 +63,94 @@ function TerritoryDetailContent() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-    const loadTerritory = useCallback(async () => {
-    if (!id) {
-        setError('无效的领地ID');
-        setLoading(false);
-        return;
-    }
-
-    try {
-      setLoading(true);
-            setError('');
-      // Since there is no getById, we fetch all and find
-      const list = await TerritoryService.getTerritoriesMine();
-      const found = list.find(t => t.id === id);
-      if (found) {
-        setTerritory(found);
-        setLocForm({ x1: String(found.x1), z1: String(found.z1), x2: String(found.x2), z2: String(found.z2) });
-      } else {
-                setTerritory(null);
-                setError('领地未找到或您无访问权限');
-      }
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-                setError(e.message || '加载领地失败');
-      } else {
-                setError('加载领地失败：未知错误');
-      }
-    } finally {
-      setLoading(false);
-    }
-    }, [id]);
-
   useEffect(() => {
-    if (isAuthenticated) {
-            loadTerritory();
+    if (territory) {
+      setLocForm({ x1: String(territory.x1), z1: String(territory.z1), x2: String(territory.x2), z2: String(territory.z2) });
     }
-    }, [isAuthenticated, loadTerritory]);
+  }, [territory]);
 
   const handleDonate = async () => {
         if (!id) return;
-            const amount = Number(donateAmount);
-            if (!amount || amount <= 0) {
-                message.warning('请输入大于 0 的捐赠数量');
-                return;
-            }
+        const amount = Number(donateAmount);
+        if (!amount || amount <= 0) {
+            message.warning('请输入大于 0 的捐赠数量');
+            return;
+        }
       try {
-          setIsDonating(true);
-                    await TerritoryService.postTerritoriesDonate(id, { amount });
+          await donateMutation.mutateAsync({ id, amount });
           setDonateAmount('');
-                    message.success('捐赠成功');
-                    await refreshProfile(); // 更新个人额度
-                    setTerritory(prev => prev ? { ...prev, credits: prev.credits + amount } : null); // 更新领地额度
+          message.success('捐赠成功');
+          await refreshProfile();
       } catch {
-      } finally {
-          setIsDonating(false);
       }
   };
 
   const handleInvite = async () => {
       if (!id) return;
       try {
-          setIsInviting(true);
-          await TerritoryService.postTerritoriesInvite(id, { qq: inviteQQ });
+          await inviteMutation.mutateAsync({ id, qq: inviteQQ });
           setInviteQQ('');
           message.success('邀请发送成功');
-      } catch {} finally {
-          setIsInviting(false);
-      }
+      } catch {}
   };
 
   const handleUpdateLocation = async () => {
       if (!id) return;
       try {
-          setIsUpdatingLoc(true);
-          await TerritoryService.putTerritoriesLocation(id, {
+          await updateLocationMutation.mutateAsync({
+              id,
               x1: Number(locForm.x1),
               z1: Number(locForm.z1),
               x2: Number(locForm.x2),
               z2: Number(locForm.z2)
           });
-                    message.success('位置更新请求已提交，等待管理员审核');
-                    await loadTerritory();
-      } catch {} finally {
-          setIsUpdatingLoc(false);
-      }
+          message.success('位置更新请求已提交，等待管理员审核');
+      } catch {}
   };
 
   const handleLeave = async () => {
-            if (!id) return;
-            const confirmed = await new Promise<boolean>((resolve) => {
-                modal.confirm({
-                    title: '确定要退出该领地吗？',
-                    content: '退出后会扣除您在该领地的全部捐献额度，返还 90% 至个人额度。',
-                    okText: '确认退出',
-                    cancelText: '取消',
-                    okButtonProps: { danger: true },
-                    onOk: () => resolve(true),
-                    onCancel: () => resolve(false),
-                });
-            });
-            if (!confirmed) return;
+      if (!id || !user) return;
+      const confirmed = await new Promise<boolean>((resolve) => {
+          modal.confirm({
+              title: '确定要退出该领地吗？',
+              content: '退出后会扣除您在该领地的全部捐献额度，返还 90% 至个人额度。',
+              okText: '确认退出',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => resolve(true),
+              onCancel: () => resolve(false),
+          });
+      });
+      if (!confirmed) return;
       try {
-          // Remove self
-          if (!user) return;
-          await TerritoryService.deleteTerritoriesMembers(id, { qq: user.qq });
-                    message.success('已退出领地');
+          await removeMemberMutation.mutateAsync({ id, qq: user.qq });
+          message.success('已退出领地');
           router.push('/dashboard/territories');
-      } catch {
-      }
+      } catch {}
   };
 
   const handleDelete = async () => {
-            if (!id) return;
-            const confirmed = await new Promise<boolean>((resolve) => {
-                modal.confirm({
-                    title: '确定要申请删除该领地吗？',
-                    content: '此操作不可撤销，提交后等待管理员审核。',
-                    okText: '确认提交',
-                    cancelText: '取消',
-                    okButtonProps: { danger: true },
-                    onOk: () => resolve(true),
-                    onCancel: () => resolve(false),
-                });
-            });
-            if (!confirmed) return;
+      if (!id) return;
+      const confirmed = await new Promise<boolean>((resolve) => {
+          modal.confirm({
+              title: '确定要申请删除该领地吗？',
+              content: '此操作不可撤销，提交后等待管理员审核。',
+              okText: '确认提交',
+              cancelText: '取消',
+              okButtonProps: { danger: true },
+              onOk: () => resolve(true),
+              onCancel: () => resolve(false),
+          });
+      });
+      if (!confirmed) return;
       try {
-          await TerritoryService.deleteTerritories(id);
-                    message.success('删除申请已提交');
-                    router.push('/dashboard/territories');
-      } catch {
-      }
+          await deleteMutation.mutateAsync(id);
+          message.success('删除申请已提交');
+          router.push('/dashboard/territories');
+      } catch {}
   };
 
-    if (isLoading || loading) {
+    if (isLoading || loadingTerritories) {
         return (
             <DashboardLayout title="领地详情" showBack>
                 <Flex justify="center" align="center" style={{ minHeight: 280 }}>
@@ -204,7 +163,7 @@ function TerritoryDetailContent() {
     if (!territory) {
         return (
             <DashboardLayout title="领地详情" showBack>
-                <Alert type="error" showIcon title={error || '领地未找到或无法访问'} />
+                <Alert type="error" showIcon title="领地未找到或无法访问" />
             </DashboardLayout>
         );
     }
@@ -260,7 +219,7 @@ function TerritoryDetailContent() {
                                  value={donateAmount}
                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDonateAmount(e.target.value)}
                              />
-                             <Button type="primary" loading={isDonating} onClick={handleDonate}>捐赠</Button>
+                             <Button type="primary" loading={donateMutation.isPending} onClick={handleDonate}>捐赠</Button>
                          </Space.Compact>
                          <Text style={{ display: 'block', marginTop: 10, color: '#4d6e95', fontSize: 12 }}>
                              退出领地时返还个人 90% 已捐赠额度<br />同时领地额度会减少 100% 您的捐赠量
@@ -309,7 +268,7 @@ function TerritoryDetailContent() {
                                         />
                                     </Space.Compact>
                                 </div>
-                                <Button type="primary" loading={isUpdatingLoc} onClick={handleUpdateLocation} style={{ marginTop: 16 }} block>
+                                <Button type="primary" loading={updateLocationMutation.isPending} onClick={handleUpdateLocation} style={{ marginTop: 16 }} block>
                                     更新位置/范围
                                 </Button>
                                 <Text style={{ display: 'block', marginTop: 8, color: '#4d6e95', fontSize: 12 }}>
@@ -327,7 +286,7 @@ function TerritoryDetailContent() {
                                         value={inviteQQ}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInviteQQ(e.target.value)}
                                     />
-                                    <Button loading={isInviting} onClick={handleInvite}>邀请</Button>
+                                    <Button loading={inviteMutation.isPending} onClick={handleInvite}>邀请</Button>
                                 </Space.Compact>
                             </div>
 

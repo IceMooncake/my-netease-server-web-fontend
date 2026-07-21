@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useMyTerritories } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TerritoryService, TerritoryListResponse } from '@/app/api';
 import Link from 'next/link';
 import { Card, Tag, Button, Spin, Empty, Flex, Typography, Space } from 'antd';
 import { PlusOutlined, EnvironmentOutlined } from '@ant-design/icons';
@@ -15,27 +14,14 @@ const { Title, Text } = Typography;
 export default function TerritoriesPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [territories, setTerritories] = useState<TerritoryListResponse>([]);
+
+  const { data: territories = [] } = useMyTerritories();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
         router.push('/login');
     }
   }, [isLoading, isAuthenticated, router]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-        const loadData = async () => {
-             try {
-                const myTerritories = await TerritoryService.getTerritoriesMine();
-                setTerritories(myTerritories);
-             } catch (e) {
-                 console.error(e);
-             }
-        };
-        loadData();
-    }
-  }, [isAuthenticated]);
 
   if (isLoading || !user) {
     return <Flex justify="center" align="center" style={{ height: '100vh' }}><Spin size="large" /></Flex>;
@@ -62,7 +48,7 @@ export default function TerritoriesPage() {
              </Empty>
         ) : (
             <Space orientation="vertical" size={16} style={{ width: '100%' }}>
-              {territories.map((territory) => (
+              {territories.map((territory: typeof territories[number]) => (
                 <Link key={territory.id} href={`/dashboard/territories/view?id=${territory.id}`}>
                   <Card hoverable style={{ borderRadius: '12px' }}>
                     <Flex justify="space-between" align="center">

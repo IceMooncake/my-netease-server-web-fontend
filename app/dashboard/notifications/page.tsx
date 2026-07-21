@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useUnreadNotifications, useMarkRead } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { NotificationService, NotificationListResponse } from '@/app/api';
 import { Button, Card, Typography, Empty, Spin, Flex, App } from 'antd';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 
@@ -14,9 +13,9 @@ export default function NotificationsPage() {
   const { message } = App.useApp();
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
-  const [notifications, setNotifications] = useState<NotificationListResponse>([]);
-  const [loading, setLoading] = useState(true);
-  const [readingId, setReadingId] = useState<string | null>(null);
+
+  const { data: notifications = [], isLoading: loading, refetch } = useUnreadNotifications();
+  const markReadMutation = useMarkRead();
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -24,61 +23,24 @@ export default function NotificationsPage() {
     }
   }, [isAuthLoading, isAuthenticated, router]);
 
-  const loadNotifications = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await NotificationService.getNotifications();
-      setNotifications(data);
-    } catch (e: unknown) {
-      console.error(e);
-      message.error('加载通知列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [message]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadNotifications();
-    }
-  }, [isAuthenticated, loadNotifications]);
-
   const handleRead = async (id: string) => {
     try {
-      setReadingId(id);
-      await NotificationService.putNotificationsRead(id);
+      await markReadMutation.mutateAsync(id);
       message.success('已标记为已读');
-      // Optimistically remove from list or reload
-      setNotifications(prev => prev.filter(n => n.id !== id));
-      // Optionally reload to be sure
-      // await loadNotifications();
-    } catch (e: unknown) {
-       console.error(e);
-       message.error('操作失败');
-    } finally {
-      setReadingId(null);
+    } catch {
+      message.error('操作失败');
     }
   };
 
   const handleReadAll = async () => {
-      // If there was an API for read all, we would use it.
-      // Since there isn't one evident, we can loop or just ask user to do one by one.
-      // Or maybe the user meant "mark read" individually.
-      // For now, I'll stick to individual actions as per API capabilities shown.
-      // If I want to implement read all, I'd have to promise.all all unread.
-      if (notifications.length === 0) return;
-      
-      try {
-          setLoading(true);
-          await Promise.all(notifications.map(n => NotificationService.putNotificationsRead(n.id)));
-          message.success('全部已读');
-          setNotifications([]);
-      } catch {
-          message.error('部分标记失败');
-          loadNotifications();
-      } finally {
-          setLoading(false);
-      }
+    if (notifications.length === 0) return;
+    try {
+      await Promise.all(notifications.map((n: typeof notifications[number]) => markReadMutation.mutateAsync(n.id)));
+      message.success('全部已读');
+    } catch {
+      message.error('部分标记失败');
+      refetch();
+    }
   };
 
   if (isAuthLoading || !user) {
@@ -112,7 +74,7 @@ export default function NotificationsPage() {
              />
         ) : (
             <div className="space-y-4">
-              {notifications.map((notification) => (
+              {notifications.map((notification: typeof notifications[number]) => (
                 <Card 
                     key={notification.id} 
                     hoverable 
@@ -123,7 +85,7 @@ export default function NotificationsPage() {
                             type="text" 
                             icon={<CheckOutlined />} 
                             onClick={() => handleRead(notification.id)}
-                            loading={readingId === notification.id}
+                            loading={markReadMutation.isPending}
                             block
                         >
                             标记已读

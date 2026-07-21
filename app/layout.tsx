@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import 'antd/dist/reset.css';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
+import { TRPCProvider } from '@/lib/trpc/Provider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +30,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <TRPCProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </TRPCProvider>
       </body>
     </html>
   );

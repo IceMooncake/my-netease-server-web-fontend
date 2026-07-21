@@ -1,11 +1,10 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useMyInvitations, useAcceptInvitation, useRevokeInvitation } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TerritoryService, InvitationResponse } from '@/app/api';
-import { Button, Card, Typography, Space, Modal, Empty, Spin, Flex, App } from 'antd';
+import { Button, Card, Typography, Space, Empty, Spin, Flex, App } from 'antd';
 import { CheckOutlined, CloseOutlined, TeamOutlined } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
@@ -14,9 +13,10 @@ export default function InvitationsPage() {
   const { message, modal } = App.useApp();
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
-  const [invitations, setInvitations] = useState<InvitationResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const { data: invitations = [], isLoading: loading, refetch } = useMyInvitations();
+  const acceptMutation = useAcceptInvitation();
+  const revokeMutation = useRevokeInvitation();
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -24,39 +24,12 @@ export default function InvitationsPage() {
     }
   }, [isAuthLoading, isAuthenticated, router]);
 
-  const loadInvitations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await TerritoryService.getTerritoriesInvitationsMine();
-      setInvitations(data);
-    } catch (e) {
-      console.error(e);
-      message.error('加载邀请列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadInvitations();
-    }
-  }, [isAuthenticated, loadInvitations]);
-
   const handleAccept = async (id: string, territoryName: string) => {
     try {
-        setActionLoading(id);
-        await TerritoryService.postTerritoriesInvitationsAccept(id);
-        message.success(`已加入领地: ${territoryName}`);
-        await loadInvitations(); // Refresh list
+      await acceptMutation.mutateAsync(id);
+      message.success(`已加入领地: ${territoryName}`);
     } catch (e: unknown) {
-        if (e instanceof Error) {
-             message.error(`加入失败: ${e.message}`);
-        } else {
-             message.error('加入失败');
-        }
-    } finally {
-        setActionLoading(null);
+      message.error(e instanceof Error ? `加入失败: ${e.message}` : '加入失败');
     }
   };
 
@@ -69,22 +42,12 @@ export default function InvitationsPage() {
           okButtonProps: { danger: true },
           onOk: async () => {
               try {
-                  // Using a different state or just handling it here since modal blocks
-                  // But to update UI loading state on the button behind consistent with accept:
-                  setActionLoading(id);
-                  await TerritoryService.deleteTerritoriesInvitations(id);
+                  await revokeMutation.mutateAsync(id);
                   message.success('已拒绝邀请');
-                  await loadInvitations();
               } catch (e: unknown) {
-                if (e instanceof Error) {
-                     message.error(`操作失败: ${e.message}`);
-                } else {
-                     message.error('操作失败');
-                }
-              } finally {
-                  setActionLoading(null);
+                  message.error(e instanceof Error ? `操作失败: ${e.message}` : '操作失败');
               }
-          }
+          },
       });
   };
 
@@ -114,7 +77,7 @@ export default function InvitationsPage() {
                     <Title level={4} style={{ margin: 0, color: '#173f6f' }}>待处理邀请</Title>
                     <Text type="secondary">您收到的领地加入邀请</Text>
                 </div>
-                <Button type="default" onClick={loadInvitations} loading={loading}>刷新</Button>
+                <Button type="default" onClick={() => refetch()} loading={loading}>刷新</Button>
             </Flex>
 
             {loading ? (
@@ -125,7 +88,7 @@ export default function InvitationsPage() {
                 <Empty description="暂无待处理的邀请" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
                 <Flex vertical>
-                    {invitations.map((item, index, arr) => (
+                    {invitations.map((item: typeof invitations[number], index: number, arr: typeof invitations) => (
                         <div
                             key={item.id}
                             style={{
@@ -169,7 +132,7 @@ export default function InvitationsPage() {
                                 <Button
                                     type="primary"
                                     icon={<CheckOutlined />}
-                                    loading={actionLoading === item.id}
+                                    loading={acceptMutation.isPending}
                                     onClick={() => handleAccept(item.id, item.territory_name)}
                                 >
                                     接受
@@ -178,7 +141,7 @@ export default function InvitationsPage() {
                                     danger
                                     type="text"
                                     icon={<CloseOutlined />}
-                                    disabled={actionLoading === item.id}
+                                    disabled={acceptMutation.isPending || revokeMutation.isPending}
                                     onClick={() => handleReject(item.id, item.territory_name)}
                                 >
                                     拒绝

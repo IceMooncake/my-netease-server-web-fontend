@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useCreateTerritory } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TerritoryService } from '@/app/api';
 import { Card, Button, Form, Input, Typography, Row, Col, App } from 'antd';
 import { StopOutlined, BuildOutlined } from '@ant-design/icons';
 
@@ -16,7 +15,8 @@ export default function CreateTerritoryPage() {
   const router = useRouter();
   const [form] = Form.useForm();
   const [type, setType] = useState<'NO_ENTRY' | 'NO_BREAK'>('NO_ENTRY');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const createMutation = useCreateTerritory();
 
   if (isLoading) return <div>Loading...</div>;
   if (!isAuthenticated) {
@@ -25,17 +25,15 @@ export default function CreateTerritoryPage() {
   }
 
   const onFinish = async (values: unknown) => {
-    setIsSubmitting(true);
     try {
-      const result = await TerritoryService.postTerritories({
-          name: (values as { name: string }).name,
-          type
-      });
+      const result = await createMutation.mutateAsync({
+        name: (values as { name: string }).name,
+        type
+      }) as { id: string; name: string; status: string };
       message.success('领地创建成功！');
       router.push(`/dashboard/territories/view?id=${result.id}`);
     } catch {
-    } finally {
-      setIsSubmitting(false);
+      // error handled by hook
     }
   };
 
@@ -97,7 +95,7 @@ export default function CreateTerritoryPage() {
             </Form.Item>
 
             <Form.Item>
-                <Button type="primary" htmlType="submit" loading={isSubmitting} block size="large" style={{ height: '48px', fontSize: '16px' }}>
+                <Button type="primary" htmlType="submit" loading={createMutation.isPending} block size="large" style={{ height: '48px', fontSize: '16px' }}>
                     立即创建 (无需消耗)
                 </Button>
                 <Paragraph type="secondary" style={{ textAlign: 'center', marginTop: 16, fontSize: '12px' }}>

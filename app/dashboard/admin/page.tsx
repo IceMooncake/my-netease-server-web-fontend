@@ -1,9 +1,8 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useAdminTasks, useProcessTask } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useCallback, useEffect, useState } from 'react';
-import { AdminTaskResponse, AdminService } from '@/app/api';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button, Badge, Tag, Tabs, Spin, message, Typography, Descriptions, Space } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
@@ -16,9 +15,10 @@ type AdminFilter = 'PENDING' | 'DONE' | 'IGNORED' | 'REJECTED'
 export default function AdminPage() {
     const { isAuthenticated, user, isLoading } = useAuth();
     const router = useRouter();
-    const [tasks, setTasks] = useState<AdminTaskResponse[]>([]);
     const [filter, setFilter] = useState<AdminFilter>('PENDING');
-    const [loadingTasks, setLoadingTasks] = useState(false);
+
+    const { data: tasks = [], isLoading: loadingTasks } = useAdminTasks(filter);
+    const processMutation = useProcessTask();
 
     const tabItems = [
         { key: 'PENDING', label: '待处理' },
@@ -40,34 +40,11 @@ export default function AdminPage() {
         }
     }, [isLoading, isAuthenticated, user, router]);
 
-    const loadTasks = useCallback(async (status: AdminFilter) => {
-        setLoadingTasks(true);
-        try {
-            const data = await AdminService.getAdminTasks({ status });
-            return data;
-        } catch (e) {
-            console.error(e);
-            return [];
-        } finally {
-            setLoadingTasks(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        let mounted = true;
-        if (user?.is_admin === 1) {
-            loadTasks(filter).then(data => {
-                if (mounted) setTasks(data);
-            });
-        }
-        return () => { mounted = false; };
-    }, [user, filter, loadTasks]);
-
     const handleProcess = async (taskId: string, approved: boolean) => {
         let processMessage = '';
         if (!approved) {
              const reason = prompt('请输入拒绝理由(必填)');
-             if (reason === null) return; // Cancelled
+             if (reason === null) return;
              if (!reason.trim()) {
                  message.warning('拒绝理由不能为空');
                  return;
@@ -80,22 +57,20 @@ export default function AdminPage() {
         }
 
         try {
-            await AdminService.postAdminProcess({
+            await processMutation.mutateAsync({
                 taskId,
                 approved,
                 message: processMessage
             });
             message.success('操作成功');
-            // Manual refresh
-            const data = await loadTasks(filter);
-            setTasks(data);
         } catch {
+            // error handled
         }
     };
 
     if (isLoading || !user || user.is_admin !== 1) return <Spin size="large" style={{ display: 'flex', justifyContent: 'center', marginTop: 100 }} />;
 
-    const renderTask = (task: AdminTaskResponse) => (
+    const renderTask = (task: typeof tasks[number]) => (
         <Card 
             key={task.id} 
             className="mb-4" 

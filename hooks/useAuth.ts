@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
-import { AuthenticationService, UserProfileResponse } from '@/app/api'
 import { useRouter } from 'next/navigation'
-import { fetchAndSaveUser, getCurrentUser, clearCurrentUser } from '@/lib/auth'
+import { fetchAndSaveUser, getCurrentUser, clearCurrentUser, type UserProfile } from '@/lib/auth'
+import { trpcClient } from '@/lib/trpc/client'
 
 interface AuthState {
   isLoading: boolean
   isAuthenticated: boolean
-  user: UserProfileResponse | null
+  user: UserProfile | null
   error: string | null
 }
 
@@ -20,13 +20,12 @@ interface UseAuthReturn extends AuthState {
 export function useAuth(): UseAuthReturn {
   const router = useRouter()
   const [state, setState] = useState<AuthState>({
-    isLoading: true, // Start with loading to check initial state
+    isLoading: true,
     isAuthenticated: false,
     user: null,
     error: null,
   })
 
-  // Initialize auth state from local storage or fetch
   useEffect(() => {
     const initAuth = async () => {
       const storedUser = getCurrentUser();
@@ -34,12 +33,10 @@ export function useAuth(): UseAuthReturn {
         setState(prev => ({ ...prev, isAuthenticated: true, user: storedUser, isLoading: false }));
       }
       
-      // Always try to refresh from server to check if session is still valid
       try {
         const user = await fetchAndSaveUser();
         setState(prev => ({ ...prev, isAuthenticated: true, user: user, isLoading: false }));
-      } catch (e) {
-        // If fetch fails (401), we are not authenticated
+      } catch {
         clearCurrentUser();
         setState(prev => ({ ...prev, isAuthenticated: false, user: null, isLoading: false }));
       }
@@ -51,9 +48,8 @@ export function useAuth(): UseAuthReturn {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      await AuthenticationService.postAuthLogin({ qq, password })
+      await trpcClient.auth.login.mutate({ qq, password })
       
-      // After login, fetch user profile
       const user = await fetchAndSaveUser();
 
       setState({
@@ -64,7 +60,6 @@ export function useAuth(): UseAuthReturn {
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed'
-      // If it's an ApiError (from generated code), might have body.message
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -89,7 +84,7 @@ export function useAuth(): UseAuthReturn {
   const register = useCallback(async (qq: string, password: string, nick_name: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
     try {
-      const response = await AuthenticationService.postAuthRegister({ qq, password, nick_name })
+      const response = await trpcClient.auth.register.mutate({ qq, password, nick_name })
       setState(prev => ({ ...prev, isLoading: false }))
       return response
     } catch (err: unknown) {
@@ -100,12 +95,12 @@ export function useAuth(): UseAuthReturn {
   }, [])
 
   const refreshProfile = useCallback(async () => {
-     try {
-        const user = await fetchAndSaveUser();
-        setState(prev => ({ ...prev, user }));
-     } catch (e) {
-         // ignore
-     }
+    try {
+      const user = await fetchAndSaveUser();
+      setState(prev => ({ ...prev, user: user, isAuthenticated: true }));
+    } catch {
+      // ignore
+    }
   }, []);
 
   return {
@@ -113,6 +108,6 @@ export function useAuth(): UseAuthReturn {
     login,
     logout,
     register,
-    refreshProfile
+    refreshProfile,
   }
 }

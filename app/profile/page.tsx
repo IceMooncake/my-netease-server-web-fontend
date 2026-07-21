@@ -1,20 +1,29 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { AuthenticationService } from '@/app/api';
+import { useMutation } from '@tanstack/react-query';
+import { trpcClient } from '@/lib/trpc/client';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
 import { Card, Button, Avatar, Typography, Tag, Form, Input, App, Spin, Alert, Modal } from 'antd';
 import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
 import { getStatusLabel, getStatusTagColor } from '@/lib/status-display';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 const { Title, Text } = Typography;
 
 export default function ProfilePage() {
     const { message } = App.useApp();
     const { user, logout, refreshProfile } = useAuth();
-    const [updating, setUpdating] = useState(false);
     const [form] = Form.useForm();
+
+    const updateMutation = useMutation({
+        mutationFn: (nick_name: string) => trpcClient.user.updateNickname.mutate({ nick_name }),
+        onSuccess: () => {
+            message.success('昵称修改成功');
+            refreshProfile();
+            form.resetFields();
+        },
+    });
 
     const canUpdateNickname = useMemo(() => {
         if (!user?.next_nickname_update_at) return true;
@@ -42,16 +51,7 @@ export default function ProfilePage() {
             okText: '确认',
             cancelText: '取消',
             onOk: async () => {
-                try {
-                    setUpdating(true);
-                    await AuthenticationService.patchAuthMeNickname({ nick_name: newNick });
-                    message.success('昵称修改成功');
-                    await refreshProfile();
-                    form.resetFields();
-                } catch {
-                } finally {
-                    setUpdating(false);
-                }
+                await updateMutation.mutateAsync(newNick);
             }
         });
     };
@@ -94,7 +94,7 @@ export default function ProfilePage() {
                          >
                              <Input placeholder="输入新昵称" allowClear showCount maxLength={20} />
                          </Form.Item>
-                         <Button type="primary" htmlType="submit" loading={updating} disabled={!canUpdateNickname} block>
+                         <Button type="primary" htmlType="submit" loading={updateMutation.isPending} disabled={!canUpdateNickname} block>
                              确认修改
                          </Button>
                          <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>

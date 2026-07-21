@@ -8,19 +8,20 @@
     "images:opt": "tsx ./scripts/utils/optimize-images.ts",
     "start": "next start",
     "lint": "eslint",
-    "type-check": "tsc --noEmit",
-    "api:update": "tsx ./scripts/generate-api/fetch-api-doc.ts && npm run api:gen",
-    "api:gen": "tsx ./scripts/generate-api/generate-api.ts && tsx ./scripts/generate-api/transform-api-get.ts"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
+    "@tanstack/react-query": "^5.101.3",
+    "@trpc/client": "^11.18.0",
+    "@trpc/react-query": "^11.18.0",
     "antd": "^6.3.0",
-    "axios": "^1.13.5",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "sharp": "^0.34.5",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "superjson": "^2.2.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -30,9 +31,6 @@
     "chalk": "^5.6.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "form-data": "^4.0.5",
-    "node-fetch": "^3.3.2",
-    "openapi-typescript-codegen": "^0.30.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

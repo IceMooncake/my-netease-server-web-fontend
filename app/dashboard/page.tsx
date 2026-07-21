@@ -1,10 +1,9 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useMyTerritories, useMyInvitations, useUnreadNotifications } from '@/hooks';
 import { DashboardLayout } from '@/components/ui/DashboardLayout';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { TerritoryService, NotificationService, TerritoryListResponse, InvitationListResponse, NotificationListResponse } from '@/app/api';
 import Link from 'next/link';
 import { Card, Avatar, Button, Row, Col, Spin, Flex, Typography, Tag, Space, Alert } from 'antd';
 import { UserOutlined, SettingOutlined, PlusOutlined, AppstoreOutlined, RightOutlined } from '@ant-design/icons';
@@ -15,35 +14,16 @@ const { Title, Text } = Typography;
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [territories, setTerritories] = useState<TerritoryListResponse>([]);
-  const [invitations, setInvitations] = useState<InvitationListResponse>([]);
-  const [notifications, setNotifications] = useState<NotificationListResponse>([]);
+
+  const { data: territories = [] } = useMyTerritories();
+  const { data: invitations = [] } = useMyInvitations();
+  const { data: notifications = [] } = useUnreadNotifications();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [isLoading, isAuthenticated, router]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const loadData = async () => {
-        try {
-          const [myTerritories, myInvitations, myNotifications] = await Promise.all([
-            TerritoryService.getTerritoriesMine(),
-            TerritoryService.getTerritoriesInvitationsMine(),
-            NotificationService.getNotifications(),
-          ]);
-          setTerritories(myTerritories);
-          setInvitations(myInvitations);
-          setNotifications(myNotifications);
-        } catch (e) {
-          console.error(e);
-        }
-      };
-      loadData();
-    }
-  }, [isAuthenticated]);
 
   if (isLoading || !user) {
     return <Flex justify="center" align="center" style={{ height: '100vh' }}><Spin size="large" /></Flex>;
@@ -153,9 +133,9 @@ export default function DashboardPage() {
              <Flex vertical>
                  {territories
                      .slice()
-                     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+                     .sort((a: typeof territories[number], b: typeof territories[number]) => (b.created_at || '').localeCompare(a.created_at || ''))
                      .slice(0, 3)
-                     .map((item, index, arr) => (
+                     .map((item: typeof territories[number], index: number, arr: typeof territories) => (
                          <div
                              key={item.id}
                              style={{
